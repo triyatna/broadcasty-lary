@@ -1,6 +1,6 @@
 # Broadcasty-Lary
 
-![PHP](https://img.shields.io/badge/PHP-8.2%20%7C%208.3-777BB4?logo=php)
+![PHP](https://img.shields.io/badge/PHP-8.2-777BB4?logo=php)
 ![Laravel](https://img.shields.io/badge/Laravel-12.x-FF2D20?logo=laravel)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
@@ -31,26 +31,29 @@ Frontend: framework-agnostic **TypeScript SDK** with auto WS/SSE, reconnect, bac
 6. [Quick Start](#quick-start)
 7. [Configuration](#configuration)
 8. [.env Reference](#env-reference)
-9. [Laravel Integration](#laravel-integration)
-10. [JS SDK (TypeScript)](#js-sdk-typescript)
-11. [Realtime: Publish/Subscribe](#realtime-publishsubscribe)
-12. [Presence](#presence)
-13. [RBAC Channel Policy](#rbac-channel-policy)
-14. [Replay API](#replay-api)
-15. [Push Notifications](#push-notifications)
-16. [Automatic Drivers & Failover](#automatic-drivers--failover)
-17. [Observability & Admin](#observability--admin)
-18. [Security Hardening](#security-hardening)
-19. [Multi-Tenant Model](#multi-tenant-model)
-20. [Request/Response Pattern](#requestresponse-pattern)
-21. [Offline Queue & Backpressure](#offline-queue--backpressure)
-22. [Rate Limiting & Throttling](#rate-limiting--throttling)
-23. [Disaster Readiness](#disaster-readiness)
-24. [Testing & Benchmarks](#testing--benchmarks)
-25. [Troubleshooting](#troubleshooting)
-26. [FAQ](#faq)
-27. [Contributors](#contributors)
-28. [License](#license)
+9. [Environment Variables – Complete Guide](#environment-variables--complete-guide)
+10. [Laravel Integration](#laravel-integration)
+11. [JS SDK (TypeScript)](#js-sdk-typescript)
+12. [Realtime: Publish/Subscribe](#realtime-publishsubscribe)
+13. [Presence](#presence)
+14. [RBAC Channel Policy](#rbac-channel-policy)
+15. [Replay API](#replay-api)
+16. [Push Notifications](#push-notifications)
+17. [Automatic Drivers & Failover](#automatic-drivers--failover)
+18. [Database & Storage Model](#database--storage-model)
+19. [Observability & Admin](#observability--admin)
+20. [Security Hardening](#security-hardening)
+21. [Multi-Tenant Model](#multi-tenant-model)
+22. [Request/Response Pattern](#requestresponse-pattern)
+23. [Offline Queue & Backpressure](#offline-queue--backpressure)
+24. [Rate Limiting & Throttling](#rate-limiting--throttling)
+25. [Disaster Readiness](#disaster-readiness)
+26. [Testing & Benchmarks](#testing--benchmarks)
+27. [Troubleshooting](#troubleshooting)
+28. [External Provider Setup & Docs](#external-provider-setup--docs)
+29. [FAQ](#faq)
+30. [Contributors](#contributors)
+31. [License](#license)
 
 ---
 
@@ -225,6 +228,179 @@ BROADCASTY_ONESIGNAL=false
 ONESIGNAL_APP_ID=...
 ONESIGNAL_API_KEY=...
 ```
+
+---
+
+## Environment Variables – Complete Guide
+
+Set these in your project’s `.env`. Each variable below explains **what it is**, **when you need it**, and **how to obtain or format it**. If a provider is unused, leave its vars empty.
+
+### Core / General
+
+| Key                          | Required    | What it does                                                     | How to set / Notes                                                                                       |
+| ---------------------------- | ----------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `BROADCASTY_DRIVER`          | Yes         | Selects transport driver. Use `auto` for detection and failover. | `auto` \| `redis` \| `ably` \| `pusher` \| `reverb` \| `null`. Default: `auto`.                          |
+| `BROADCASTY_AUTO_ORDER`      | No          | Driver preference order in `auto` mode.                          | Comma list; default: `reverb,pusher,ably,redis`.                                                         |
+| `BROADCASTY_ALLOWED_ORIGINS` | Recommended | CORS allowlist for browsers.                                     | Use exact origins: e.g. `https://app.example.com,https://admin.example.com`. Use `*` only for local/dev. |
+| `BROADCASTY_PROM`            | No          | Enables Prometheus metrics route.                                | `true` or `false`. Default `true`.                                                                       |
+| `BROADCASTY_JWT_PUBLIC_KEY`  | Yes         | Public key used to verify client JWTs.                           | Paste PEM **public** key (multiline). See “JWT Keys” below.                                              |
+| `BROADCASTY_REDIS_CONN`      | Recommended | Laravel Redis connection name.                                   | Matches `config/database.php` `redis.connections`. Usually `default`.                                    |
+| `BROADCASTY_REDIS_PREFIX`    | No          | Prefix for Broadcasty keys.                                      | Default `bcy:`. Change if you share Redis across apps.                                                   |
+
+#### JWT Keys (how to generate)
+
+```bash
+# RSA 2048 example
+openssl genrsa -out jwtRS256.key 2048
+openssl rsa -in jwtRS256.key -pubout -out jwtRS256.key.pub
+# Put the *public* key content (jwtRS256.key.pub) into BROADCASTY_JWT_PUBLIC_KEY
+# Keep the private key in your app/IdP to issue client tokens.
+```
+
+Paste public key as a single line in `.env` with `\n` newlines:
+
+```
+BROADCASTY_JWT_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqh...snip...\n-----END PUBLIC KEY-----"
+```
+
+---
+
+### Redis (baseline for presence/replay even if you use a provider)
+
+| Key                             | Required    | Notes                                                                                |
+| ------------------------------- | ----------- | ------------------------------------------------------------------------------------ |
+| `BROADCASTY_REDIS_CONN=default` | Recommended | Ensure `redis` is configured in `config/database.php` and Redis server is reachable. |
+| `BROADCASTY_REDIS_PREFIX=bcy:`  | Recommended | Namespace isolation for keys.                                                        |
+
+> Redis install: Ubuntu `apt install redis-server`; Docker `docker run -p 6379:6379 redis`. Laravel config: <https://laravel.com/docs/12.x/redis>
+
+---
+
+### Laravel Reverb (Pusher protocol)
+
+Use **Reverb** if you want a first-party WebSocket service for Laravel.  
+Docs: <https://laravel.com/docs/12.x/reverb>
+
+| Key                 | Required              | What                                                   |
+| ------------------- | --------------------- | ------------------------------------------------------ |
+| `REVERB_APP_ID`     | Yes (if using Reverb) | Your Reverb app ID.                                    |
+| `REVERB_APP_KEY`    | Yes                   | Public key.                                            |
+| `REVERB_APP_SECRET` | Yes                   | Secret key.                                            |
+| `REVERB_HOST`       | Yes                   | Host of your Reverb server, e.g. `reverb.example.com`. |
+| `REVERB_PORT`       | No                    | Usually `443`.                                         |
+| `REVERB_SCHEME`     | No                    | `https` for TLS (recommended).                         |
+
+> Set `BROADCASTY_DRIVER=auto` and fill Reverb vars; Broadcasty will pick Reverb first by default.
+
+---
+
+### Pusher
+
+Create an app and obtain keys at: <https://dashboard.pusher.com/>
+
+| Key                 | Required              | What                                          |
+| ------------------- | --------------------- | --------------------------------------------- |
+| `PUSHER_APP_ID`     | Yes (if using Pusher) | App ID.                                       |
+| `PUSHER_APP_KEY`    | Yes                   | Public key.                                   |
+| `PUSHER_APP_SECRET` | Yes                   | Secret key.                                   |
+| `PUSHER_HOST`       | Yes                   | `api-pusher.pusher.com` or your cluster host. |
+| `PUSHER_PORT`       | No                    | `443` (TLS).                                  |
+| `PUSHER_SCHEME`     | No                    | `https`.                                      |
+
+> In `auto` mode, Pusher is attempted if Reverb is absent/unhealthy and Pusher vars are present.
+
+---
+
+### Ably
+
+Create an API key at: <https://ably.com/accounts>
+
+| Key        | Required            | What                         |
+| ---------- | ------------------- | ---------------------------- |
+| `ABLY_KEY` | Yes (if using Ably) | In the form `appKey:secret`. |
+
+> In auto mode, Ably is tried after Reverb/Pusher when `ABLY_KEY` is present.
+
+---
+
+### Web Push (VAPID) – Browser Notifications
+
+Generate VAPID keys using your preferred tool (e.g. PHP WebPush or node-web-push).
+
+- PHP: <https://github.com/web-push-libs/web-push-php>
+- Node: <https://github.com/web-push-libs/web-push>
+
+| Key                         | Required         | What                                 |
+| --------------------------- | ---------------- | ------------------------------------ |
+| `BROADCASTY_WEBPUSH`        | No               | `true` to enable Web Push bridge.    |
+| `WEBPUSH_VAPID_SUBJECT`     | Yes when enabled | Contact URI `mailto:you@example.com` |
+| `WEBPUSH_VAPID_PUBLIC_KEY`  | Yes when enabled | Base64URL public key.                |
+| `WEBPUSH_VAPID_PRIVATE_KEY` | Yes when enabled | Private key.                         |
+
+> Client must register a service worker and call `pushManager.subscribe()` using your `PUBLIC_KEY` (base64url).
+
+---
+
+### Firebase Cloud Messaging (FCM)
+
+Create a Firebase project → Cloud Messaging → Server key.  
+Console: <https://console.firebase.google.com/>
+
+| Key              | Required         | What                                                      |
+| ---------------- | ---------------- | --------------------------------------------------------- |
+| `BROADCASTY_FCM` | No               | `true` to enable FCM bridge.                              |
+| `FCM_SERVER_KEY` | Yes when enabled | Legacy server key (HTTP v1 not required for this bridge). |
+
+> Client must provide its device/web FCM token to your backend; send with `['token' => $fcmToken]`.
+
+---
+
+### Apple Push Notification service (APNs)
+
+Set up a Key (.p8) in Apple Developer → Keys → APNs.  
+Docs: <https://developer.apple.com/documentation/usernotifications/setting_up_a_remote_notification_server>
+
+| Key               | Required         | What                                           |
+| ----------------- | ---------------- | ---------------------------------------------- |
+| `BROADCASTY_APNS` | No               | `true` to enable APNs bridge.                  |
+| `APNS_KEY_ID`     | Yes when enabled | Key ID of your .p8.                            |
+| `APNS_TEAM_ID`    | Yes when enabled | Apple Team ID.                                 |
+| `APNS_P8_PATH`    | Yes when enabled | Absolute path to `.p8` file (secure location). |
+| `APNS_BUNDLE_ID`  | Yes when enabled | iOS bundle identifier.                         |
+| `APNS_SANDBOX`    | No               | `true` for sandbox; `false` for production.    |
+
+> You must generate an APNs provider **JWT** for each request. Hook your JWT creation inside `ApnsBridge` where indicated.
+
+---
+
+### OneSignal
+
+Create an app and find App ID + REST API Key at: <https://dashboard.onesignal.com/>
+
+| Key                    | Required         | What                               |
+| ---------------------- | ---------------- | ---------------------------------- |
+| `BROADCASTY_ONESIGNAL` | No               | `true` to enable OneSignal bridge. |
+| `ONESIGNAL_APP_ID`     | Yes when enabled | App ID.                            |
+| `ONESIGNAL_API_KEY`    | Yes when enabled | REST API Key.                      |
+
+> Client must provide `player_id` (OneSignal device ID). Send payload with `['player_id' => '...']`.
+
+---
+
+### CORS, TLS, and Origins
+
+- Always serve production over **HTTPS**.
+- Set `BROADCASTY_ALLOWED_ORIGINS` to comma-separated origins, e.g. `https://app.example.com,https://admin.example.com`.
+- Avoid `*` in production.
+
+---
+
+### Provider Selection Cheatsheet
+
+- Use **Reverb** for first-party WS in Laravel. Fill `REVERB_*` and keep `BROADCASTY_DRIVER=auto`.
+- Use **Pusher** if you prefer managed WS; fill `PUSHER_*`.
+- Use **Ably** alternatively; fill `ABLY_KEY`.
+- Regardless of provider, keep **Redis** available for presence/replay.
 
 ---
 
@@ -487,6 +663,152 @@ app(\Triyatna\Broadcasty\Push\OneSignalBridge::class)->send(
 
 ---
 
+---
+
+## Database & Storage Model
+
+Broadcasty-Lary uses **RDBMS for metadata/audit** and **Redis for presence + replay** (by default). Below is a precise map of what’s stored where, how to tune it, and what to change for production.
+
+### 1) RDBMS Tables (migrations included)
+
+Engine recommendation:
+
+- **MySQL 8+/MariaDB 10.6+** or **PostgreSQL 13+**
+- Charset/Collation: `utf8mb4` (MySQL) or `UTF8` (PostgreSQL)
+- Row format: dynamic/compact (MySQL InnoDB)
+
+**a) `broadcasty_channels`**
+
+- Purpose: optional per-channel policy snapshot.
+- Columns: `tenant_id (index)`, `name (index, unique with tenant)`, `policy (JSON)`, timestamps.
+- Indexes: unique `(tenant_id, name)`; both are already indexed.
+- Notes: if channels are ephemeral, you can leave this empty.
+
+**b) `broadcasty_api_keys`**
+
+- Purpose: service-to-service access (if you extend the package with HMAC/API-key flows).
+- Columns: `tenant_id (index)`, `name`, `key (unique)`, `hash (unique)`, `scopes (JSON)`, `rotated_at`, timestamps.
+- Rotation: use `php artisan broadcasty:key:rotate` to integrate with Vault/KMS in your app.
+
+**c) `broadcasty_events`**
+
+- Purpose: optional durable audit/replay mirror **(disabled by default)**; by default, replay lives in Redis for performance.
+- Columns: `tenant_id (index)`, `channel (index)`, `partition (index)`, `sequence (index)`, `envelope_id (idempotency)`, `payload (BLOB/BYTEA)`, `meta (JSON)`, `published_at (index)`.
+- Uniqueness: `(tenant_id, channel, partition, sequence)`.
+- When to enable: only if you need **long-term retention**, compliance/regulatory replay, or cross-region ETL. For most cases, rely on Redis replay + compact retention.
+- Tuning: partition by tenant or channel if this grows large; add composite indexes for typical queries.
+
+**d) `broadcasty_audit_logs`**
+
+- Purpose: action trails (publish, presence, admin actions).
+- Columns: `tenant_id (index)`, `action`, `actor_id`, `ip`, `ctx (JSON)`, timestamps.
+- Rotation: schedule deletion/archival every N days (see rotation section).
+
+> **Table prefixing**: Laravel supports a per-connection prefix in `config/database.php` (e.g. `'prefix' => 'bcy_'`). The bundled migration uses explicit table names. If you need a table prefix, either (1) configure the DB connection prefix, or (2) edit the migration file names to include your prefix. We don’t force a custom prefix from `.env` to avoid conflicts.
+
+#### Suggested extra indexes (optional, heavy traffic)
+
+MySQL:
+
+```sql
+CREATE INDEX bcy_evt_tenant_chan_pub ON broadcasty_events (tenant_id, channel, published_at);
+CREATE INDEX bcy_audit_tenant_time ON broadcasty_audit_logs (tenant_id, created_at);
+```
+
+PostgreSQL:
+
+```sql
+CREATE INDEX bcy_evt_tenant_chan_pub ON broadcasty_events (tenant_id, channel, published_at);
+CREATE INDEX bcy_audit_tenant_time ON broadcasty_audit_logs (tenant_id, created_at);
+```
+
+### 2) Redis Keyspaces (default)
+
+- Presence store: `bcy:prs:{tenant}:{channel}` → `HSET memberId -> JSON(member)`; TTL refreshed on join/heartbeat, base TTL from `config('broadcasty.presence.ttl')`.
+- Sequences: `bcy:seq:{tenant}:{channel}:{partition}` → `INCR` for strict ordering.
+- Replay store: `bcy:rpl:{tenant}:{channel}:{partition}` → `HSET sequence -> payload` with `EXPIRE` = `replay.retention_sec`.
+
+> **Isolation & multi-tenant**: `BROADCASTY_REDIS_PREFIX` defaults to `bcy:`. If your Redis is shared, change the prefix and keep non-overlapping tenant IDs.
+
+### 3) Replay retention & compaction
+
+Config: `config('broadcasty.replay')`
+
+- `retention_sec`: how long per-partition data stays in Redis (default 3600s).
+- `max_bytes_per_channel`: soft target if you implement your own compactor.
+- `partitions`: number of partitions per channel from the policy resolver.
+
+**Compaction & rotation**: the included `RedisReplayStore` relies on Redis `EXPIRE`. For long-term retention, either:
+
+- Mirror events into `broadcasty_events` (toggle in your app’s publisher path), or
+- Export Redis replay to another store on a schedule (queue job).
+
+### 4) Migrations in production (zero-downtime tips)
+
+- Use `php artisan migrate` behind maintenance mode or deploy windows.
+- Add new large indexes concurrently (PostgreSQL `CREATE INDEX CONCURRENTLY`, MySQL pt-online-schema-change or gh-ost).
+- For very large `broadcasty_events`, prefer partitioned tables (PostgreSQL declarative partitioning by month/tenant; MySQL 8 range/list partitioning).
+
+### 5) Backup & restore
+
+- DB: include `broadcasty_*` tables in your normal backups.
+- Redis: snapshotting (RDB) or AOF; ensure persistence if replay durability matters.
+- Test restores for a representative tenant/channel before enabling strict SLAs.
+
+---
+
+### Operational Housekeeping
+
+#### Rotations & retention
+
+- **JWT/public keys**: rotate regularly via your IdP/secret manager, then refresh `BROADCASTY_JWT_PUBLIC_KEY`.
+- **API keys**: `php artisan broadcasty:key:rotate` (extend the command to your KMS/Vault).
+- **Audit logs**: add a scheduled task to delete/archive rows older than N days:
+
+```php
+// app/Console/Kernel.php
+$schedule->call(fn() => \DB::table('broadcasty_audit_logs')->where('created_at','<',now()->subDays(90))->delete())->daily();
+```
+
+- **Replay**: set `replay.retention_sec` to match your use case; for bigger values, monitor Redis memory.
+
+#### Monitoring & alerts
+
+- Scrape `GET /broadcasty/metrics` (enable via `BROADCASTY_PROM=true`).
+- Alert on: driver failover, publish failures, 4xx/5xx spikes, Redis memory pressure, JWT verification errors.
+- Enable OpenTelemetry to your collector to trace publish/subscribe paths.
+
+#### Scaling guidance
+
+- Increase **partitions** for hot channels in your `PolicyResolver`.
+- Horizontal scale your PHP workers; SSE runs efficiently behind Nginx/Apache with buffering disabled (`X-Accel-Buffering: no` header is set).
+- For WebSockets, offload to **Reverb/Pusher/Ably** and keep Laravel focused on auth/publish and SSE fallback.
+
+#### Data compliance
+
+- Avoid placing PII in message payloads. Prefer IDs and fetch details server-side.
+- Use `meta.schema` for versioning. Add a transformer layer (server or client) when schema evolves.
+- For GDPR requests, delete user presence entries and prune audit logs referencing the user ID.
+
+---
+
+### Deployment & CI/CD Notes
+
+- Ensure `.env` is templated with all keys in this README to avoid ambiguity.
+- Run `npm run build` in `resources/js-sdk` only if you plan to publish/pack the SDK to your registry; otherwise import from source.
+- Health-checks: an app route that calls `app('broadcasty')->metrics()` is already exposed at `/broadcasty/metrics` (when enabled). Use it for liveness/readiness.
+- If you need DB table prefixes, prefer Laravel DB **connection prefix** to keep migrations simple.
+
+---
+
+### Choosing Database vs Redis for Replay
+
+- **Redis (default)**: fastest; great for 1–24h retention, reconnect catch-up, dashboards.
+- **Database mirror (optional, custom)**: implement a simple listener to also insert into `broadcasty_events` during publish for long-term retention/compliance. Query via indexes shown above.
+- **Don’t switch `replay.store` to `database`** unless you implement `DatabaseReplayStore` in your app—by default, this package wires Redis replay.
+
+---
+
 ## Observability & Admin
 
 - **Prometheus**: `GET /broadcasty/metrics`
@@ -579,6 +901,52 @@ vendor/bin/phpunit
 
 ---
 
+## External Provider Setup & Docs
+
+Use these official links to create accounts, obtain API keys, and follow provider-specific guides.
+
+### Pusher / Laravel Reverb (Pusher protocol)
+
+- Create an app / get keys: https://dashboard.pusher.com/
+- Pusher HTTP API docs: https://pusher.com/docs/channels/server_api/http-api/
+- Laravel Reverb docs: https://laravel.com/docs/reverb
+
+### Ably
+
+- Sign up / dashboard: https://ably.com/
+- Create API key: https://ably.com/docs/auth/basic
+- REST publish: https://ably.com/docs/api/rest-api
+
+### Firebase Cloud Messaging (FCM)
+
+- Console: https://console.firebase.google.com/
+- Docs: https://firebase.google.com/docs/cloud-messaging
+- Server key (legacy) lives under: Project Settings → Cloud Messaging → “Server key”.  
+  If you use the HTTP v1 API instead, adjust the bridge or issue a PR to add OAuth2 service account support.
+
+### Apple Push Notification service (APNs)
+
+- Create .p8 Auth Key: https://developer.apple.com/account/resources/authkeys/list
+- APNs provider token (JWT) guide: https://developer.apple.com/documentation/usernotifications/setting_up_a_remote_notification_server
+- Bundle ID & entitlements: https://developer.apple.com/documentation/bundleresources/entitlements
+
+### OneSignal
+
+- Dashboard: https://dashboard.onesignal.com/
+- REST API docs: https://documentation.onesignal.com/reference/create-notification
+
+### Web Push (VAPID)
+
+- Web Push library (PHP): https://github.com/web-push-libs/web-push-php#vapid
+- Concept overview: https://web.dev/articles/push-notifications-web-push-protocol
+
+### Observability
+
+- Prometheus: https://prometheus.io/
+- OpenTelemetry: https://opentelemetry.io/
+
+---
+
 ## FAQ
 
 **Q: Do I need WebSockets?**  
@@ -602,7 +970,7 @@ A: No. Bridges are optional; enable and configure only what you need.
 
 ---
 
-## 📄 License
+## License
 
 This package is released under the [MIT License](LICENSE).
 
