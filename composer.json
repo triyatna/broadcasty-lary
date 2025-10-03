@@ -1,0 +1,35 @@
+{
+  "name": "triyatna/broadcasty-lary",
+  "description": "Feature-rich, secure, multi-tenant realtime broadcasting for Laravel 12 (WS/SSE/Push/Replay/RBAC).",
+  "type": "library",
+  "license": "MIT",
+  "autoload": {
+    "psr-4": {
+      "Triyatna\\Broadcasty\\": "src/"
+    }
+  },
+  "require": {
+    "php": "^8.2",
+    "ext-json": "*",
+    "illuminate/support": "^12.0",
+    "illuminate/queue": "^12.0",
+    "illuminate/redis": "^12.0",
+    "guzzlehttp/guzzle": "^7.8",
+    "lcobucci/jwt": "^5.2",
+    "minishlink/web-push": "^9.3",
+    "brick/math": "^0.12",
+    "ramsey/uuid": "^4.7",
+    "psr/log": "^3.0"
+  },
+  "require-dev": {
+    "orchestra/testbench": "^9.0",
+    "phpunit/phpunit": "^11.0"
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Triyatna\\Broadcasty\\BroadcastyServiceProvider"
+      ]
+    }
+  }
+}
