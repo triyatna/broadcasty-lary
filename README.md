@@ -965,7 +965,7 @@ A: No. Bridges are optional; enable and configure only what you need.
 
 ## Contributors
 
-- **Triyatna** — creator & maintainer
+- **@triyatna** — creator & maintainer
 - Community PRs are welcome. Please open issues with clear repro steps and propose focused PRs. Follow PSR-12/Laravel conventions. Add tests when changing core flows (publish/subscribe/replay/security).
 
 ---
