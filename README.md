@@ -1,5 +1,5 @@
 # Broadcasty-Lary
-
+ 
 ![PHP](https://img.shields.io/badge/PHP-8.2-777BB4?logo=php)
 ![Laravel](https://img.shields.io/badge/Laravel-12.x-FF2D20?logo=laravel)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
